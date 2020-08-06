@@ -1,16 +1,25 @@
 const express = require('express');
 const dotenv = require("dotenv");
 const { v4: uuidv4 } = require("uuid");
+const { ExpressPeerServer } = require('peer');
 
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
+
+// Starting a peerjs server
+const peerServer = ExpressPeerServer(server, {
+	debug: true
+});
 
 // Load env variables
 dotenv.config({ path: './config/config.env' });
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
+
+// Use the peerserver
+app.use('/peerjs', peerServer);
 
 app.get('/', (req, res) => {
 	res.redirect(`/${uuidv4()}`);
@@ -23,9 +32,9 @@ app.get('/:room', (req, res) => {
 });
 
 io.on('connection', socket => {
-	socket.on('join-room', (roomId) => {
+	socket.on('join-room', (roomId, userId) => {
 		socket.join(roomId);
-		socket.to(roomId).broadcast.emit('user-connected');
+		socket.to(roomId).broadcast.emit('user-connected ', userId);
 	})
 })
 
